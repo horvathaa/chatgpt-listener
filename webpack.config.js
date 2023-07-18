@@ -38,7 +38,7 @@ var options = {
   entry: {
     // newtab: path.join(__dirname, 'src', 'pages', 'Newtab', 'index.jsx'),
     options: path.join(__dirname, 'src', 'pages', 'Options', 'index.jsx'),
-    // popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
+    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
     contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
     devtools: path.join(__dirname, 'src', 'pages', 'Devtools', 'index.js'),
@@ -153,12 +153,12 @@ var options = {
       chunks: ['options'],
       cache: false,
     }),
-    // new HtmlWebpackPlugin({
-    //   template: path.join(__dirname, 'src', 'pages', 'Popup', 'index.html'),
-    //   filename: 'popup.html',
-    //   chunks: ['popup'],
-    //   cache: false,
-    // }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, 'src', 'pages', 'Popup', 'index.html'),
+      filename: 'popup.html',
+      chunks: ['popup'],
+      cache: false,
+    }),
     new HtmlWebpackPlugin({
       template: path.join(
         __dirname,

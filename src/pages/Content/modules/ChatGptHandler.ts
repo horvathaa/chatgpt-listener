@@ -1,5 +1,6 @@
 import ChatGptThread from './ChatGptThread/ChatGptThread';
 
+// add in code to get the name of each thread
 class ChatGptHandler {
   _threads: Map<string, ChatGptThread> = new Map();
   _activeThread: ChatGptThread | null = null;
@@ -29,7 +30,7 @@ class ChatGptHandler {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // console.log('request:', request, 'sender:', sender);
       if (request.command === 'chatOpen') {
-        console.log('this._threads', this._threads);
+        // console.log('this._threads', this._threads);
         // window.onload = () => {
         // document.addEventListener('DOMContentLoaded', () => {
         // console.log('request:', request, 'threads', this._threads);
