@@ -66,7 +66,6 @@ class FirestoreController {
       this._auth = getAuth(this._firebaseApp);
       this._refs = this.initRefs();
     }
-    console.log('this', this);
   }
 
   get firebaseApp() {
@@ -105,7 +104,6 @@ class FirestoreController {
       if (!config) {
         throw new Error('Firestore Controller: secrets.app.js not found');
       }
-      console.log('config', config);
       return initializeApp(config); // consider making event emit so that other classes can listen for this
       // }
     } catch (e) {
@@ -134,15 +132,7 @@ class FirestoreController {
         // return this._user;
         await this._auth.signOut();
       }
-      console.log('signing in....');
       const githubAuth = new GithubAuthProvider();
-      console.log('githubAuth', githubAuth, 'this?', this);
-      // const result = await signInWithRedirect(this._auth, githubAuth);
-      // const result = await signInWithEmailAndPassword(
-      //   this._auth,
-      //   'ambear9@gmail.com',
-      //   '123456'
-      // );
       const result = await signInWithPopup(this._auth, githubAuth);
       const { user } = result;
       console.log('user', user);
@@ -153,21 +143,7 @@ class FirestoreController {
         return user;
       }
     } catch (e: any) {
-      // console.log('error signing in', e);
-      const errorCode = e.code;
-      const errorMessage = e.message;
-      const email = e.customData.email;
-      const credential = GithubAuthProvider.credentialFromError(e);
-      console.log(
-        'errorCode',
-        errorCode,
-        'errorMessage',
-        errorMessage,
-        'email',
-        email,
-        'credential',
-        credential
-      );
+      throw new Error('Firestore Controller: could not sign in' + e);
     }
   }
 
