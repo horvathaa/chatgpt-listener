@@ -30,24 +30,37 @@ class ChatGptThread {
   _userRef: HTMLElement | null = null;
   _tempPair: ThreadPair | null = null;
   _lastEditedTime: NodeJS.Timeout | null = null;
-  constructor() {
+  constructor(readonly _id: string) {
     this.init();
   }
 
   init() {
+    // console.log('calling initPageObserver');
     this.initPageObserver();
   }
 
   initPageObserver() {
-    const targetNode: Node | Element | null = document.body.querySelector(
+    const targetNode: HTMLElement | null = document.body.querySelector(
       '.flex-col.text-sm.dark\\:bg-gray-800' // not sure if this will remain constant...
     );
-    if (targetNode) {
+    // console.log('targetNode', targetNode?.id);
+    if (targetNode && (targetNode.id === this._id || targetNode.id === '')) {
+      // console.log(
+      //   'targetNode',
+      //   targetNode,
+      //   'this._threadItems',
+      //   this._threadItems
+      // );
+      targetNode.setAttribute('id', this._id);
+      if (!this._threadItems.length) {
+        this.initThreadItems(targetNode);
+        // console.log('thread items', this._threadItems);
+      }
       const config: MutationObserverInit = { childList: true, subtree: true };
       this._observer = new MutationObserver(this.handleMessages);
       this._observer.observe(targetNode, config);
     } else {
-      setTimeout(() => this.initPageObserver(), 1000);
+      setTimeout(() => this.initPageObserver(), 5000);
     }
   }
 
@@ -55,14 +68,14 @@ class ChatGptThread {
     mutationsList: MutationRecord[],
     observer: MutationObserver
   ) => {
-    console.log(
-      'mutationsList:',
-      mutationsList,
-      'observer:',
-      observer,
-      'this._lastEditedTime',
-      this._lastEditedTime
-    );
+    // console.log(
+    //   'mutationsList:',
+    //   mutationsList,
+    //   'observer:',
+    //   observer,
+    //   'this._lastEditedTime',
+    //   this._lastEditedTime
+    // );
     this._tempPair = this._tempPair || {
       id: new Date().getTime().toString(),
       time: new Date().getTime(),
@@ -102,12 +115,38 @@ class ChatGptThread {
       };
 
       this._threadItems.push(this._tempPair);
-      console.log('new thread items', this._threadItems);
+      // console.log('new thread items', this._threadItems);
       this._userRef = null;
       this._botRef = null;
       this._tempPair = null;
     }, 5000);
   };
+
+  private initThreadItems(targetNode: HTMLElement) {
+    targetNode.childNodes.forEach((node, i) => {
+      if (i % 2 === 0) {
+        const userMessage = (node as HTMLElement).innerText;
+        let botMessage = '';
+        let codeBlocks: CodeBlock[] = [];
+        if (targetNode.childNodes.length > i + 1) {
+          const nextNode = targetNode.childNodes[i + 1] as HTMLElement;
+          botMessage = nextNode.innerText;
+          const preNodes = nextNode.querySelectorAll('pre');
+          codeBlocks = Array.from(preNodes).map((preNode) =>
+            this.makeCodeBlock(preNode as HTMLElement)
+          );
+        }
+        const pair: ThreadPair = {
+          id: new Date().getTime().toString(),
+          time: new Date().getTime(),
+          userMessage,
+          botResponse: botMessage,
+          codeBlocks,
+        };
+        this._threadItems.push(pair);
+      }
+    });
+  }
 
   destroyPageObserver() {
     this._observer?.disconnect();
@@ -120,11 +159,11 @@ class ChatGptThread {
   }
 
   private handleCopy = (e: Event) => {
-    console.log('e', e);
-    const button = e.target as HTMLElement;
-    console.log('copied from this button', button);
-    const preNode = button?.parentElement?.parentElement?.parentElement;
-    console.log('wtf', preNode);
+    // console.log('e', e);
+    // const button = e.target as HTMLElement;
+    // console.log('copied from this button', button);
+    // const preNode = button?.parentElement?.parentElement?.parentElement;
+    // console.log('wtf', preNode);
     if (navigator.clipboard && navigator.clipboard.readText) {
       // Read the text from the clipboard
       navigator.clipboard
@@ -157,7 +196,7 @@ class ChatGptThread {
       surroundingText,
       language,
     };
-    console.log('adding this', codeBlock);
+    // console.log('adding this', codeBlock);
     this.attachListeners(preNode);
     return codeBlock;
   }
