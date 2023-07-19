@@ -8,6 +8,9 @@ import {
   query,
   where,
   getDocs,
+  setDoc,
+  getDoc,
+  doc,
   // DocumentData,
 } from 'firebase/firestore';
 import { Functions, getFunctions } from 'firebase/functions';
@@ -94,6 +97,7 @@ class FirestoreController {
         }
         if (request.message === 'copyCode') {
           console.log('got it', request);
+          this.write(DB_COLLECTIONS.WEB_META, request.payload);
         }
       }
     );
@@ -144,6 +148,28 @@ class FirestoreController {
       }
     } catch (e: any) {
       throw new Error('Firestore Controller: could not sign in' + e);
+    }
+  }
+
+  private formatData(data: any) {
+    return { ...data, user: this._user?.uid };
+  }
+
+  public async write(ref: DB_REFS, data: any, id?: string) {
+    if (!this._refs) {
+      throw new Error('Firestore Controller: refs not initialized');
+    }
+    const refCollection = this._refs.get(ref);
+    if (!refCollection) {
+      throw new Error('Firestore Controller: ref not found');
+    }
+    try {
+      const docRef = id ? doc(refCollection, id) : doc(refCollection);
+      console.log('docRef', docRef);
+      await setDoc(docRef, this.formatData(data));
+      return docRef;
+    } catch (e) {
+      throw new Error('Firestore Controller: could not write to db' + e);
     }
   }
 

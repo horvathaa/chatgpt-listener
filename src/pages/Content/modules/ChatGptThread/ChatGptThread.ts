@@ -29,6 +29,14 @@ interface ThreadPair {
   codeBlocks: CodeBlock[];
 }
 
+// webpage qualities we listen for that may change (probably will change) at some point
+const SELECTORS = {
+  THREAD_CONTAINER: '.flex-col.text-sm.dark\\:bg-gray-800',
+  TEXTAREA: '#prompt-textarea',
+  COPY_TEXT: 'Copy code',
+  COPIED_TEXT: 'Copied!',
+};
+
 class ChatGptThread {
   _observer: MutationObserver | null = null;
   _threadItems: ThreadPair[] = [];
@@ -38,7 +46,7 @@ class ChatGptThread {
   _tempPair: ThreadPair | null = null;
   _lastEditedTime: NodeJS.Timeout | null = null;
   _botObserver: MutationObserver | null = null;
-  constructor(readonly _id: string) {
+  constructor(readonly _id: string, readonly _title: string) {
     this.init();
   }
 
@@ -47,44 +55,38 @@ class ChatGptThread {
     this.initPageObserver();
   }
 
+  // get user's input values into the "send a message" box
   listenForUserText() {
-    const targetNode: HTMLElement | null =
-      document.body.querySelector('#prompt-textarea');
+    const targetNode: HTMLElement | null = document.body.querySelector(
+      SELECTORS.TEXTAREA
+    );
     if (targetNode) {
-      console.log('targetNode', targetNode);
       targetNode.addEventListener('input', debounce(this.handleUserInput, 100));
     }
   }
 
   handleUserInput = (e: Event) => {
     const target = e.target as HTMLTextAreaElement;
-    // console.log('target', target, 'e', e);
     const value = target.value;
-    // console.log('value', value);
     this._tempUserMessage = value;
   };
 
+  // set up top-level DOM observer, which will notify when new divs are added to the list of messages
+  // indicating that a message has been sent
+  // built in timer such that, if the page has not been updated with the list of divs as a user switches between chats
+  // will re-run -- also will make sure we are looking at the correct div by checking the ID we add to the top level div
   initPageObserver() {
     const targetNode: HTMLElement | null = document.body.querySelector(
-      '.flex-col.text-sm.dark\\:bg-gray-800' // not sure if this will remain constant...
+      SELECTORS.THREAD_CONTAINER
     );
-    // console.log('targetNode', targetNode?.id);
     if (targetNode && (targetNode.id === this._id || targetNode.id === '')) {
-      // console.log(
-      //   'targetNode',
-      //   targetNode,
-      //   'this._threadItems',
-      //   this._threadItems
-      // );
       targetNode.setAttribute('id', this._id);
       if (!this._threadItems.length) {
         this.initThreadItems(targetNode);
-        // console.log('thread items', this._threadItems);
       }
       const config: MutationObserverInit = {
         childList: true,
         subtree: true,
-        // characterData: true,
       };
       this._observer = new MutationObserver(this.handleMessages);
       this._observer.observe(targetNode, config);
@@ -94,16 +96,16 @@ class ChatGptThread {
     }
   }
 
+  // reset vars for given message
   private reset() {
     this._userRef = null;
     this._botRef = null;
     this._tempPair = null;
     this._tempUserMessage = null;
-    console.log('resetting', this);
     this._botObserver?.disconnect();
-    // console.log('disconnected');
   }
 
+  // handle ongoing thread
   addToThread(mutationsList: MutationRecord[], observer: MutationObserver) {
     this._tempPair = this._tempPair || {
       id: `${new Date().getTime().toString()}-${this._tempUserMessage}`,
@@ -112,14 +114,6 @@ class ChatGptThread {
       botResponse: '',
       codeBlocks: [],
     };
-
-    // div holding user's initial query
-    // this._userRef =
-    //   this._userRef || (mutationsList[0].addedNodes[0] as HTMLElement);
-
-    // // div holding bot's response
-    // this._botRef =
-    //   this._botRef || (mutationsList[1].addedNodes[0] as HTMLElement);
 
     const hasPre =
       mutationsList[0].addedNodes.length &&
@@ -150,6 +144,7 @@ class ChatGptThread {
     }, 5000);
   }
 
+  // top-level message handler which establishes DOM mutation observer for bot response message
   handleMessages: MutationCallback = (
     mutationsList: MutationRecord[],
     observer: MutationObserver
@@ -167,6 +162,7 @@ class ChatGptThread {
       ) {
         const addedNodes = Array.from(mutation.addedNodes.values());
         // console.log('addedNodes', addedNodes, 'this', this);
+        // find user message given text value
         const nodeWithMessage = addedNodes.find(
           (n) =>
             (n as HTMLElement).innerText === this._tempUserMessage &&
@@ -175,10 +171,6 @@ class ChatGptThread {
         if (nodeWithMessage) {
           this._userRef = nodeWithMessage;
           this._botRef = nodeWithMessage.nextSibling as HTMLElement;
-
-          // const tempObserver = new MutationObserver((mutations, observer) =>
-          //   this.addToThread(mutations, observer)
-          // );
 
           this._botObserver = new MutationObserver((mutations, observer) =>
             this.addToThread(mutations, observer)
@@ -191,18 +183,12 @@ class ChatGptThread {
               characterData: true,
             }
           );
-          // console.log('THIS!!!', this);
-          // this.addToThread(mutationsList, observer);
         }
       }
     });
-    // if (mutationsList.length === 2) {
-    //   this.handleOngoingThread(mutationsList, observer);
-    //   return;
-    // } else {
-    // }
   };
 
+  // ingest already-existing messages
   private initThreadItems(targetNode: HTMLElement) {
     targetNode.childNodes.forEach((node, i) => {
       if (i % 2 === 0) {
@@ -230,13 +216,14 @@ class ChatGptThread {
     });
   }
 
+  // disconnect top-level observer
   destroyPageObserver() {
     this._observer?.disconnect();
   }
 
+  // attach listeners to code blocks
   private attachListeners(preNode: HTMLElement, parentId: string) {
     const button = preNode.querySelector('button');
-    // console.log('butt', button, 'preNode', preNode);
     button?.addEventListener('click', (e: Event) =>
       this.handleCopy(e, preNode, HowCopied.BUTTON, parentId)
     );
@@ -251,43 +238,37 @@ class ChatGptThread {
     parentId: string
   ) => {
     console.log('e', e);
-    // const button = e.target as HTMLElement;
-    // console.log('copied from this button', button);
-    // const preNode = button?.parentElement?.parentElement?.parentElement;
-    // console.log('wtf', preNode);
     if (navigator.clipboard && navigator.clipboard.readText) {
       // Read the text from the clipboard
-
       navigator.clipboard
         .readText()
         .then((text) => {
           let textToSend = '';
+          // if user clicked the "copy code" button, ensure the text content matches the code block
           if (howCopied === HowCopied.BUTTON) {
             console.log('text', text, 'preNode', preNode.innerText);
-            const splitter = preNode.innerText.includes('Copy code')
-              ? 'Copy code'
-              : 'Copied!';
+            const splitter = preNode.innerText.includes(SELECTORS.COPY_TEXT)
+              ? SELECTORS.COPY_TEXT
+              : SELECTORS.COPIED_TEXT;
             const cleanText = preNode.innerText.split(splitter)[1].trim() || '';
-            // console.log(
-            //   'cleanText',
-            //   cleanText,
-            //   'text',
-            //   text,
-            //   'preNode',
-            //   preNode.innerText
-            // );
             if (text.trim() !== cleanText.trim()) {
               textToSend = cleanText;
             } else {
               textToSend = text;
             }
-          } else if (howCopied === HowCopied.SELECTION) {
+          }
+          // if user copied using the keyboard shortcut, ensure the text content matches their selection
+          else if (howCopied === HowCopied.SELECTION) {
             const selection = window.getSelection();
             if (selection) {
               textToSend =
                 text.trim() === selection.toString().trim()
                   ? text
                   : selection.toString();
+            }
+            // if for some reason we cannot get the select text, just send the clipboard text
+            else {
+              textToSend = text;
             }
           }
           // Access the text read from the clipboard
@@ -311,12 +292,15 @@ class ChatGptThread {
       console.error('Clipboard API not supported');
     }
     if (howCopied === HowCopied.BUTTON) {
+      // since button is dynamically created and destroyed on copy, re-attach the listener once the button
+      // has been recreated
       setTimeout(() => {
         this.attachListeners(preNode, parentId);
       }, 4000);
     }
   };
 
+  // init code block object
   private makeCodeBlock(preNode: HTMLElement, parentId: string): CodeBlock {
     // const codeNode = preNode?.querySelector('code');
     const code = preNode?.innerText || '';

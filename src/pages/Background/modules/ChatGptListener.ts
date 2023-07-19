@@ -18,7 +18,7 @@ class ChatGptListener {
         console.log('tabId:', tabId, 'changeInfo:', changeInfo, 'tab:', tab);
         chrome.tabs.sendMessage(tabId, {
           command: 'chatOpen',
-          payload: tab.url,
+          payload: { url: tab.url, title: tab.title },
         });
       }
     });
