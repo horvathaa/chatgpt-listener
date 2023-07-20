@@ -115,11 +115,14 @@ class ChatGptThread {
       codeBlocks: [],
     };
 
-    const hasPre =
-      mutationsList[0].addedNodes.length &&
-      mutationsList[0].addedNodes[0].nodeName === 'PRE';
+    const addedNodes = mutationsList
+      .filter((m) => m.addedNodes && m.addedNodes.length > 0)
+      .flatMap((m) => Array.from(m.addedNodes.values()));
+    const hasPre = addedNodes.some((n) => n.nodeName === 'PRE');
     if (hasPre) {
-      const preNode = mutationsList[0].addedNodes[0] as HTMLElement;
+      const preNode = addedNodes.find(
+        (n) => n.nodeName === 'PRE'
+      ) as HTMLElement;
       const codeBlock = this.makeCodeBlock(preNode, this._tempPair.id);
       this._tempPair = {
         ...this._tempPair,
@@ -128,13 +131,16 @@ class ChatGptThread {
     }
     this._lastEditedTime && clearTimeout(this._lastEditedTime);
     this._lastEditedTime = setTimeout(() => {
+      const codeBlocks = this._tempPair?.codeBlocks.map((c) =>
+        this.updateCodeBlock(c)
+      );
       this._tempPair = {
         ...this._tempPair,
         userMessage: this._userRef?.innerText || '',
         botResponse: this._botRef?.innerText || '',
         id: this._tempPair?.id || new Date().getTime().toString(),
         time: this._tempPair?.time || new Date().getTime(),
-        codeBlocks: this._tempPair?.codeBlocks || [],
+        codeBlocks: codeBlocks || [],
       };
       // console.log('this', this);
 
@@ -300,9 +306,15 @@ class ChatGptThread {
     }
   };
 
+  updateCodeBlock(codeBlock: CodeBlock) {
+    const innerText = codeBlock.codeRef.innerText;
+    return { ...codeBlock, code: innerText };
+  }
+
   // init code block object
   private makeCodeBlock(preNode: HTMLElement, parentId: string): CodeBlock {
     // const codeNode = preNode?.querySelector('code');
+    console.log('preNode', preNode, 'preNode.innerText', preNode.innerText);
     const code = preNode?.innerText || '';
     const codeRef = preNode as HTMLElement;
     const surroundingText = codeRef?.innerText || '';
