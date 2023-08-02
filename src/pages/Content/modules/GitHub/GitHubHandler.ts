@@ -1,3 +1,5 @@
+import { WEB_INFO_SOURCE } from '../../../Background/firebase/FirestoreController';
+
 interface Repo {
   name: string;
   owner: string;
@@ -93,19 +95,6 @@ class GitHubHandler {
   }
 
   complexParseRepo(url: string, branchName?: string): Repo | undefined {
-    // const urlParts = url.split('/');
-    // const owner = urlParts[3];
-    // const name = urlParts[4];
-    // const branch = branchName || 'main';
-    // const commit = (
-    //   document.querySelector(SELECTORS.REPO_HOME_HASH) as HTMLElement
-    // )?.innerText;
-    // console.log('parseRepo', {
-    //   owner,
-    //   name,
-    //   branch,
-    //   commit,
-    // });
     const regexData = url.match(RepoRegex);
     if (!regexData) {
       return;
@@ -143,14 +132,8 @@ class GitHubHandler {
         if (selection) {
           const code = selection.toString();
           console.log('code', code);
-          this._copiedCode = {
-            language: filePath.split('.').pop() || '',
-            code,
-            filename: filePath,
-            url: copyUrl,
-          };
+          this.handleCopy(copyUrl, filePath, code);
         }
-        console.log('copied code', this._copiedCode);
       });
     }
     const button = document.querySelector('[aria-label="Copy raw content"]');
@@ -160,16 +143,32 @@ class GitHubHandler {
         if (fileContent) {
           const code = (fileContent as HTMLTextAreaElement).value;
           console.log('button code', code);
-          this._copiedCode = {
-            language: filePath.split('.').pop() || '',
-            code,
-            filename: filePath,
-            url: copyUrl,
-          };
+          this.handleCopy(copyUrl, filePath, code);
         }
-        console.log('copied code', this._copiedCode);
       });
     }
+  }
+
+  handleCopy(copyUrl: string, filePath: string, code: string) {
+    this._copiedCode = {
+      language: filePath.split('.').pop() || '',
+      code,
+      filename: filePath,
+      url: copyUrl,
+    };
+
+    chrome.runtime.sendMessage({
+      message: 'copyCode',
+      payload: {
+        code,
+        url: copyUrl,
+        additionalMetadata: {
+          codeMetadata: this._copiedCode,
+          repo: this._repo,
+        },
+        type: WEB_INFO_SOURCE.GITHUB,
+      },
+    });
   }
 }
 

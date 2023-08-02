@@ -20,8 +20,6 @@ import {
   getAuth,
   signInWithPopup,
   GithubAuthProvider,
-  signInWithRedirect,
-  signInWithEmailAndPassword,
 } from 'firebase/auth';
 // import { Container } from '../../container';
 // import * as dotenv from 'dotenv';
@@ -34,6 +32,13 @@ import { config } from './secrets.app.js';
 
 enum DataSourceType {
   FIRESTORE = 'FIRESTORE',
+}
+
+export enum WEB_INFO_SOURCE {
+  CHAT_GPT = 'CHAT_GPT',
+  GITHUB = 'GITHUB',
+  STACKOVERFLOW = 'STACKOVERFLOW',
+  OTHER = 'OTHER',
 }
 
 export type DB_REFS =
@@ -152,10 +157,12 @@ class FirestoreController {
   }
 
   private formatData(data: any) {
-    return { ...data, user: this._user?.uid };
+    const time = Date.now();
+    const id = `${this._user?.uid}-${time}`;
+    return { ...data, user: this._user?.uid, timeCopied: time, id };
   }
 
-  public async write(ref: DB_REFS, data: any, id?: string) {
+  public async write(ref: DB_REFS, data: any) {
     if (!this._refs) {
       throw new Error('Firestore Controller: refs not initialized');
     }
@@ -164,9 +171,10 @@ class FirestoreController {
       throw new Error('Firestore Controller: ref not found');
     }
     try {
-      const docRef = id ? doc(refCollection, id) : doc(refCollection);
+      const formattedData = this.formatData(data);
+      const docRef = doc(refCollection, formattedData.id);
       console.log('docRef', docRef);
-      await setDoc(docRef, this.formatData(data));
+      await setDoc(docRef, formattedData);
       return docRef;
     } catch (e) {
       throw new Error('Firestore Controller: could not write to db' + e);

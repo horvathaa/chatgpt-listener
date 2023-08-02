@@ -1,3 +1,5 @@
+import { WEB_INFO_SOURCE } from '../../../../Background/firebase/FirestoreController';
+
 export function debounce(func: Function, timeout = 300) {
   let timer: ReturnType<typeof setTimeout>;
   return (...args: [args: any]) => {
@@ -282,9 +284,13 @@ class ChatGptThread {
           chrome.runtime.sendMessage({
             message: 'copyCode',
             payload: {
-              thread: this,
+              additionalMetadata: {
+                messageCopied: this._threadItems.find((t) => t.id === parentId),
+                thread: this,
+              },
               code: textToSend,
-              messageCopied: this._threadItems.find((t) => t.id === parentId),
+              url: window.location.href,
+              type: WEB_INFO_SOURCE.CHAT_GPT,
             },
           });
           // Use the text as needed
