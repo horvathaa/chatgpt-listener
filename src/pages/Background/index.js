@@ -3,9 +3,13 @@ import '../../assets/img/icon-128.png';
 import ChatGptListener from './modules/ChatGptListener';
 import GitHubListener from './modules/GitHubListener';
 import FirestoreController from './firebase/FirestoreController';
+import StackOverflowListener from './modules/StackOverflowListener';
+import GenericListener from './modules/GenericListener';
 
 console.log('This is the background page.');
 console.log('Put the background scripts here.');
-new ChatGptListener();
-new GitHubListener();
+// new ChatGptListener();
+// new GitHubListener();
+// new StackOverflowListener();
+new GenericListener();
 FirestoreController.create();

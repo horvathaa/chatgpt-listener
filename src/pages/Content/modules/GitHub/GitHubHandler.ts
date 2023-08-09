@@ -10,7 +10,7 @@ interface Repo {
   readme?: string;
 }
 
-interface Code {
+export interface Code {
   language: string;
   code: string;
   filename: string;
