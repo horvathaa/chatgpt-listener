@@ -11,5 +11,6 @@ console.log('Put the background scripts here.');
 // new ChatGptListener();
 // new GitHubListener();
 // new StackOverflowListener();
-new GenericListener();
-FirestoreController.create();
+
+export const listener = new GenericListener();
+export const firestore = FirestoreController.create();

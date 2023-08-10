@@ -198,14 +198,21 @@ class ChatGptThread {
 
   // ingest already-existing messages
   private initThreadItems(targetNode: HTMLElement) {
-    targetNode.childNodes.forEach((node, i) => {
+    const arr = Array.from(targetNode.childNodes).filter(
+      (n) => n.nodeName !== 'HEADER'
+    );
+
+    arr.forEach((node, i) => {
+      // if (node.nodeName === 'HEADER') return;
+      console.log('node', node);
       if (i % 2 === 0) {
         const userMessage = (node as HTMLElement).innerText;
         let botMessage = '';
         let codeBlocks: CodeBlock[] = [];
         const id = `${new Date().getTime().toString()}-${userMessage}`;
-        if (targetNode.childNodes.length > i + 1) {
-          const nextNode = targetNode.childNodes[i + 1] as HTMLElement;
+        if (arr.length > i + 1) {
+          const nextNode = arr[i + 1] as HTMLElement;
+          console.log('nextNode', nextNode);
           botMessage = nextNode.innerText;
           const preNodes = nextNode.querySelectorAll('pre');
           codeBlocks = Array.from(preNodes).map((preNode) =>
@@ -219,9 +226,11 @@ class ChatGptThread {
           botResponse: botMessage,
           codeBlocks,
         };
+
         this._threadItems.push(pair);
       }
     });
+    console.log('hewwo?', this._threadItems);
   }
 
   // disconnect top-level observer

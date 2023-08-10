@@ -73,6 +73,7 @@ class FirestoreController {
       this._functions = getFunctions(this._firebaseApp);
       this._auth = getAuth(this._firebaseApp);
       this._refs = this.initRefs();
+      this.initAuth();
     }
   }
 
@@ -138,6 +139,7 @@ class FirestoreController {
     }
     try {
       if (this._user) {
+        console.log('user already signed in', this);
         // return this._user;
         await this._auth.signOut();
       }

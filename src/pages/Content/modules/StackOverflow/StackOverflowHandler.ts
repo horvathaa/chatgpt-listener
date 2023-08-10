@@ -132,7 +132,7 @@ class StackOverflowHandler {
             },
           });
           chrome.runtime.sendMessage({
-            command: 'copyCode',
+            message: 'copyCode',
             payload: {
               code: window.getSelection()?.toString(),
               url: this._url,
