@@ -1,8 +1,17 @@
-const URL_COMMAND_MAP: { [k: string]: string } = {
-  'https://www.google.com/': 'googleOpen',
-  'https://stackoverflow.com': 'stackoverflowOpen',
-  'https://github.com': 'githubOpen',
-  'chat.openai': 'chatOpen',
+export enum COMMANDS {
+  GOOGLE_OPEN = 'googleOpen',
+  STACKOVERFLOW_OPEN = 'stackoverflowOpen',
+  GITHUB_OPEN = 'githubOpen',
+  CHAT_OPEN = 'chatOpen',
+  OTHER_OPEN = 'otherOpen',
+  GOOGLE_SEARCH = 'googleSearch',
+}
+
+const URL_COMMAND_MAP: { [k: string]: COMMANDS } = {
+  'https://www.google.com/': COMMANDS.GOOGLE_OPEN,
+  'https://stackoverflow.com': COMMANDS.STACKOVERFLOW_OPEN,
+  'https://github.com': COMMANDS.GITHUB_OPEN,
+  'chat.openai': COMMANDS.CHAT_OPEN,
 };
 
 class GenericListener {
@@ -25,12 +34,19 @@ class GenericListener {
       ) {
         // this.initGpt();
         const key = this.keys.find((url) => tab.url?.includes(url)) as string;
-        console.log('tabId:', tabId, 'changeInfo:', changeInfo, 'tab:', tab);
-        chrome.tabs.sendMessage(tabId, {
-          //   command: this.eventCommand,
-          command: URL_COMMAND_MAP[key],
-          payload: { url: tab.url, title: tab.title },
-        });
+        if (!key) {
+          chrome.tabs.sendMessage(tabId, {
+            command: COMMANDS.OTHER_OPEN,
+            payload: { url: tab.url, title: tab.title },
+          });
+        } else {
+          console.log('tabId:', tabId, 'changeInfo:', changeInfo, 'tab:', tab);
+          chrome.tabs.sendMessage(tabId, {
+            //   command: this.eventCommand,
+            command: URL_COMMAND_MAP[key],
+            payload: { url: tab.url, title: tab.title },
+          });
+        }
       }
     });
   }

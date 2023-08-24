@@ -20,6 +20,7 @@ import {
   getAuth,
   signInWithPopup,
   GithubAuthProvider,
+  UserCredential,
 } from 'firebase/auth';
 // import { Container } from '../../container';
 // import * as dotenv from 'dotenv';
@@ -29,6 +30,7 @@ import {
 
 // @ts-ignore
 import { config } from './secrets.app.js';
+import { COMMANDS } from '../modules/GenericListener';
 
 enum DataSourceType {
   FIRESTORE = 'FIRESTORE',
@@ -64,9 +66,11 @@ class FirestoreController {
   readonly _auth: Auth | undefined;
   _user: User | undefined;
   readonly _refs: Map<DB_REFS, CollectionReference> | undefined;
+  _searchData: any;
   constructor() {
     // super(() => this.dispose());
     // this._disposable = Disposable.from();
+    this._searchData = null;
     this._firebaseApp = this.initFirebaseApp();
     if (this._firebaseApp) {
       this._firestore = getFirestore(this._firebaseApp);
@@ -104,6 +108,10 @@ class FirestoreController {
         if (request.message === 'copyCode') {
           console.log('got it', request);
           this.write(DB_COLLECTIONS.WEB_META, request.payload);
+        }
+        if (request.command === COMMANDS.GOOGLE_SEARCH) {
+          console.log('got search data', request.data);
+          this._searchData = request.data;
         }
       }
     );
@@ -146,7 +154,7 @@ class FirestoreController {
       const githubAuth = new GithubAuthProvider();
       const result = await signInWithPopup(this._auth, githubAuth);
       const { user } = result;
-      console.log('user', user);
+      console.log('user', user, 'githubauth', githubAuth, 'res', result);
       if (!user) {
         throw new Error('Firestore Controller: could not retrieve user data');
       } else {
@@ -161,7 +169,13 @@ class FirestoreController {
   private formatData(data: any) {
     const time = Date.now();
     const id = `${this._user?.uid}-${time}`;
-    return { ...data, user: this._user?.uid, timeCopied: time, id };
+    return {
+      ...data,
+      user: this._user?.uid,
+      timeCopied: time,
+      id,
+      searchData: this._searchData,
+    };
   }
 
   public async write(ref: DB_REFS, data: any) {
