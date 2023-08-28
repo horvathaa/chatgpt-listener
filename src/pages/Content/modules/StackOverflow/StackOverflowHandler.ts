@@ -46,6 +46,11 @@ interface StackOverflowPost {
   postDate: Date;
 }
 
+interface StackOverflowContent {
+  type: string;
+  content: string;
+}
+
 interface StackOverflowQuestion extends StackOverflowPost {
   title: string;
   // body: string;
@@ -57,6 +62,7 @@ interface StackOverflowQuestion extends StackOverflowPost {
   views: number;
   programmingLanguage: string;
   id: string;
+  formattedQuestionBody: StackOverflowContent[];
   copied?: boolean;
   replies?: StackOverflowPost[];
   warning?: WARNINGS | WARNINGS[];
@@ -70,7 +76,7 @@ interface StackOverflowAnswer extends StackOverflowPost {
   lastEditDate?: Date;
   url: string;
   id: string;
-
+  formattedAnswerBody: StackOverflowContent[];
   copied?: boolean;
   replies?: StackOverflowPost[];
   warning?: WARNINGS | WARNINGS[];
@@ -178,6 +184,41 @@ class StackOverflowHandler {
     return formattedReplies;
   }
 
+  getPostDetails(postBody: Element) {
+    const formattedQuestionBody: StackOverflowContent[] = [];
+    Array.from(postBody.children).forEach((c) => {
+      if (c.tagName === 'PRE') {
+        formattedQuestionBody.push({
+          type: 'code',
+          content: (c as HTMLElement).innerText,
+        });
+        return;
+      }
+      if (c.tagName === 'A') {
+        formattedQuestionBody.push({
+          type: 'link',
+          content: (c as HTMLElement).innerText,
+        });
+        return;
+      }
+      if ((c as HTMLElement).classList.contains('snippet-code')) {
+        const pre = c.querySelector('pre');
+        if (pre) {
+          formattedQuestionBody.push({
+            type: 'code',
+            content: (pre as HTMLElement).innerText,
+          });
+        }
+        return;
+      }
+      formattedQuestionBody.push({
+        type: 'text',
+        content: (c as HTMLElement).innerText,
+      });
+    });
+    return formattedQuestionBody;
+  }
+
   getQuestionDetails(question: StackOverflowQuestion, questionEl: Element) {
     const score = (questionEl as HTMLElement).dataset.score;
     const postBody = questionEl.querySelector(
@@ -185,6 +226,7 @@ class StackOverflowHandler {
     ) as HTMLElement;
     if (!postBody) return { ...question, warning: WARNINGS.NO_QUESTION_BODY };
     const questionBody = postBody?.innerText;
+    const formattedQuestionBody = this.getPostDetails(postBody);
     if (Array.from(postBody.children).some((c) => c.tagName === 'PRE')) {
       this.initCopyCodeListeners(postBody, question.id);
     }
@@ -201,6 +243,7 @@ class StackOverflowHandler {
       votes: parseInt(score || '0'),
       tags: questionTags || [],
       replies: questionReplies,
+      formattedQuestionBody,
     };
   }
 
@@ -249,6 +292,7 @@ class StackOverflowHandler {
         id: '',
         postDate: new Date(),
         warning: WARNINGS.NO_ANSWER_ID,
+        formattedAnswerBody: [],
       };
     const answerContainer = answer.querySelector(
       SELECTORS.ANSWER_CONTAINER(answerId)
@@ -263,6 +307,7 @@ class StackOverflowHandler {
         id: '',
         postDate: new Date(),
         warning: WARNINGS.NO_ANSWER_BODY,
+        formattedAnswerBody: [],
       };
     const isAccepted =
       answerContainer.parentElement?.querySelector(
@@ -280,11 +325,13 @@ class StackOverflowHandler {
         id: '',
         postDate: new Date(),
         warning: WARNINGS.NO_ANSWER_BODY,
+        formattedAnswerBody: [],
       };
     if (Array.from(answerBodyEl.children).some((c) => c.tagName === 'PRE')) {
       this.initCopyCodeListeners(answerBodyEl, answerId);
     }
     const answerBody = (answerBodyEl as HTMLElement).innerText;
+    const formattedAnswerBody = this.getPostDetails(answerBodyEl);
     const { postDate, lastEditDate } = this.getTimes(answer, answerId);
     // console.log('lastEditDate in answer', lastEditDate);
     const answerUrl = `https://stackoverflow.com/a/${answerId}`;
@@ -298,6 +345,7 @@ class StackOverflowHandler {
       url: answerUrl,
       replies: answerReplies,
       id: answerId,
+      formattedAnswerBody,
     };
   }
 
@@ -333,6 +381,7 @@ class StackOverflowHandler {
       postDate: this._loadTime,
       body: '',
       votes: 0,
+      formattedQuestionBody: [],
       // warning: WARNINGS.NO_QUESTION_ID,
     };
     if (innerContent) {
